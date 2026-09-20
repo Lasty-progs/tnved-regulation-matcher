@@ -1,0 +1,12 @@
+defaults:
+  - db: postgres
+  - model: bge_m3
+  - pipeline: hybrid
+  - _self_
+
+top_k_links: 3
+
+data:
+  declarations_path: "input_data/declarations.jsonl"
+  regulations_path: "input_data/regulations.jsonl"
+  tnved_dump_path: "input_data/tnved_knowledge.txt"

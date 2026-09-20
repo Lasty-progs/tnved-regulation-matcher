@@ -1,0 +1,6 @@
+name: cointegrated/rubert-tiny2
+dim: 312
+batch_size: 64
+prefix_doc: ""
+prefix_query: ""
+normalize: true

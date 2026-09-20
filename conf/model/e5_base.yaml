@@ -1,0 +1,6 @@
+name: intfloat/multilingual-e5-base
+dim: 768
+batch_size: 32
+prefix_doc: "passage: "
+prefix_query: "query: "
+normalize: true

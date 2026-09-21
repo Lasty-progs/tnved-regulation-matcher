@@ -83,3 +83,32 @@ data:
   regulations_path: "input_data/regulations.jsonl"
   tnved_dump_path: "input_data/tnved_knowledge.txt"
 ```
+
+## Опциональная LLM-валидация(не впишется в заданное время)
+
+После построения предсказаний можно дополнительно оценить их качество с помощью
+LLM-as-a-Judge.
+
+Для этого используется локально запущенная LLM (ggml-org/gemma-4-E2B-it-GGUF:Q8_0) через OpenAI-compatible API
+(`llama.cpp`).
+
+### 1. Установка зависимостей
+
+LLM-зависимости вынесены в отдельный файл:
+
+```bash
+pip install -r requirements_llm.txt
+```
+### 2. Запуск LLM
+
+Необходимо запустить llama.cpp server с OpenAI-compatible API.
+
+По умолчанию приложение ожидает API по адресу:
+
+http://localhost:8080/v1
+### 3. Запуск валидации
+
+После получения predictions.csv запустите:
+```bash
+python scripts/validate_predictions.py
+```

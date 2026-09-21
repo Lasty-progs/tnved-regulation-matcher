@@ -10,3 +10,18 @@ data:
   declarations_path: "input_data/declarations.jsonl"
   regulations_path: "input_data/regulations.jsonl"
   tnved_dump_path: "input_data/tnved_knowledge.txt"
+
+validation:
+  predictions_path: out/predictions.csv
+  results_path: out/validation_results.csv
+  metrics_path: out/validation_metrics.json
+  
+  base_url: http://localhost:8080/v1
+  temperature: 0.0
+  max_tokens: 4096
+
+hydra: # отключение логгирования связанного с запросам
+  job_logging:
+    loggers:
+      httpx2:
+        level: WARNING

@@ -5,11 +5,17 @@ defaults:
   - _self_
 
 top_k_links: 3
+seed: 42
 
 data:
   declarations_path: "input_data/declarations.jsonl"
   regulations_path: "input_data/regulations.jsonl"
   tnved_dump_path: "input_data/tnved_knowledge.txt"
+
+reranker:
+  enabled: true
+  model_name: BAAI/bge-reranker-v2-m3
+  batch_size: 16
 
 validation:
   predictions_path: out/predictions.csv

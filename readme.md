@@ -55,7 +55,8 @@ pip install -r requirements.txt
 ```
 ### 4.3. Предварительное скачивание модели:
 ```bash
-python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3')"
+python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-m3'); SentenceTransformer('BAAI/bge-reranker-v2-m3')" 
+
 ```
 
 ### 4.4. Первичная инициализация и загрузка данных (ETL)

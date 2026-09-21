@@ -10,9 +10,11 @@ import hydra
 from omegaconf import DictConfig
 import pandas as pd
 
-from src.data.loader import DataLoader, Declaration
+from src.utils.seed import set_seed
 from src.encoders.text_encoder import TextEncoder
 from src.retrieval.hybrid import HybridRanker
+from src.data.loader import DataLoader, Declaration, Regulation
+from src.reranking.cross_encoder import RegulationReranker
 from src.utils.validator import validate_predictions
 
 
@@ -47,20 +49,55 @@ def fetch_tnved_links(db_cfg: DictConfig) -> Dict[str, Set[str]]:
 
 def rank_declarations(
     ranker: HybridRanker,
+    reranker: RegulationReranker | None,
     declarations: List[Declaration],
+    regulations: Dict[str, Regulation],
     top_k: int,
 ) -> pd.DataFrame:
-    """Выполняет ранжирование НПА для списка таможенных деклараций."""
+    """Выполняет retrieval и опциональное переранжирование НПА."""
     records: List[Dict[str, Any]] = []
 
-    for decl in declarations:
-        top_regulations = ranker.rank_declaration(decl, top_k=top_k)
-        for rank, (reg_id, score) in enumerate(top_regulations, start=1):
+    for declaration in declarations:
+        top_regulations = ranker.rank_declaration(
+            declaration,
+            top_k=top_k,
+        )
+
+        if reranker is not None:
+            candidate_regulations = [
+                regulations[regulation_id]
+                for regulation_id, _ in top_regulations
+            ]
+
+            reranked_regulations = reranker.rerank(
+                declaration,
+                candidate_regulations,
+            )
+
+            for rank, (regulation, score) in enumerate(
+                reranked_regulations,
+                start=1,
+            ):
+                records.append(
+                    {
+                        "declaration_id": declaration.declaration_id,
+                        "rank": rank,
+                        "regulation_id": regulation.regulation_id,
+                        "score": round(score, 6),
+                    }
+                )
+
+            continue
+
+        for rank, (regulation_id, score) in enumerate(
+            top_regulations,
+            start=1,
+        ):
             records.append(
                 {
-                    "declaration_id": decl.declaration_id,
+                    "declaration_id": declaration.declaration_id,
                     "rank": rank,
-                    "regulation_id": reg_id,
+                    "regulation_id": regulation_id,
                     "score": round(score, 6),
                 }
             )
@@ -70,6 +107,7 @@ def rank_declarations(
 
 def execute_pipeline(cfg: DictConfig, output_dir: str) -> None:
     """Координирует загрузку данных, гибридное ранжирование и сохранение результатов."""
+    set_seed(cfg.seed)
     os.makedirs(output_dir, exist_ok=True)
     out_csv = os.path.join(output_dir, "predictions.csv")
 
@@ -78,6 +116,10 @@ def execute_pipeline(cfg: DictConfig, output_dir: str) -> None:
         {"id": r.regulation_id, "text": r.get_search_document()}
         for r in raw_regulations
     ]
+    regulations = {
+    regulation.regulation_id: regulation
+    for regulation in raw_regulations
+}
 
     declarations = DataLoader.load_declarations(cfg.data.declarations_path)
     reg_tnved_links = fetch_tnved_links(cfg.db)
@@ -90,12 +132,21 @@ def execute_pipeline(cfg: DictConfig, output_dir: str) -> None:
         sparse_weight=cfg.pipeline.sparse_weight,
         reg_tnved_links=reg_tnved_links,
     )
+    reranker = None
+
+    if cfg.reranker.enabled:
+        reranker = RegulationReranker(
+            model_name=cfg.reranker.model_name,
+            batch_size=cfg.reranker.batch_size,
+        )
 
     df_predictions = rank_declarations(
-        ranker=ranker,
-        declarations=declarations,
-        top_k=cfg.pipeline.top_k,
-    )
+    ranker=ranker,
+    reranker=reranker,
+    declarations=declarations,
+    regulations=regulations,
+    top_k=cfg.pipeline.top_k,
+)
 
     validate_predictions(df_predictions, expected_declarations_count=len(declarations))
     df_predictions.to_csv(out_csv, index=False)

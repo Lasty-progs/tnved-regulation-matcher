@@ -10,3 +10,5 @@ numpy==1.26.4
 pandas==2.2.3
 tqdm==4.67.1
 scikit-learn==1.6.0
+
+einops==0.8.2
